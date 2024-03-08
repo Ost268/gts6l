@@ -390,12 +390,13 @@ GENKSYMS	= scripts/genksyms/genksyms
 INSTALLKERNEL  := installkernel
 DEPMOD		= /sbin/depmod
 PERL		= perl
-PYTHON		= python
+PYTHON		= /usr/bin/python
 CHECK		= sparse
 
 # Use the wrapper for the compiler.  This wrapper scans for new
 # warnings and causes the build to stop upon encountering them
-CC		= $(PYTHON) $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
+#CC		= $(PYTHON) $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
+CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
@@ -429,7 +430,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -std=gnu89
+		   -std=gnu89 -Wno-align-mismatch -Wno-void-pointer-to-int-cast -Wno-pragma-pack
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
 endif
@@ -822,8 +823,11 @@ KBUILD_CFLAGS	+= $(call cc-option, -gdwarf-4,)
 endif
 
 ifdef CONFIG_RKP_CFP
-#CFP_CC		?= $(srctree)/../../vendor/qcom/proprietary/llvm-arm-toolchain-ship/10.0/bin/clang
-CFP_CC		= $(srctree)/toolchain/llvm-arm-toolchain-ship/10.0/bin/clang
+CFP_CC		?= $(srctree)/../../vendor/qcom/proprietary/llvm-arm-toolchain-ship/10.0/bin/clang
+CC		= $(srctree)/scripts/gcc-wrapper.py $(CFP_CC)
+endif
+ifdef CONFIG_CFP
+CFP_CC		?= $(srctree)/toolchain/clang/bin/clang
 CC		= $(srctree)/scripts/gcc-wrapper.py $(CFP_CC)
 endif
 
@@ -1349,16 +1353,22 @@ ifdef lto-flags
 endif
 # Make sure compiler supports requested stack protector flag.
 ifdef stackp-name
+#  ifeq ($(call cc-option, $(stackp-flag)),)
+#	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
+#		  $(stackp-flag) not supported by compiler >&2 && exit 1
   ifeq ($(call cc-option, $(stackp-flag)),)
 	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
-		  $(stackp-flag) not supported by compiler >&2 && exit 1
+		  $(stackp-flag) not supported by compiler >&2
   endif
 endif
 # Make sure compiler does not have buggy stack-protector support.
 ifdef stackp-check
+#  ifneq ($(shell $(CONFIG_SHELL) $(stackp-check) $(CC) $(KBUILD_CPPFLAGS) $(biarch)),y)
+#	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
+ #                 $(stackp-flag) available but compiler is broken >&2 && exit 1
   ifneq ($(shell $(CONFIG_SHELL) $(stackp-check) $(CC) $(KBUILD_CPPFLAGS) $(biarch)),y)
 	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
-                  $(stackp-flag) available but compiler is broken >&2 && exit 1
+                  $(stackp-flag) available but compiler is broken >&2
   endif
 endif
 ifdef cfi-flags

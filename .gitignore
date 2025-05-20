@@ -112,5 +112,4 @@ x509.genkey
 all.config
 out/
 KernelSU/
-# Kdevelop4
-*.kdev4
+*.zip
